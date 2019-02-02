@@ -1,0 +1,4 @@
+{
+    "vertex": "#version 100\nprecision highp float;\nattribute vec2 inCoord;\nvarying vec2 position;\nuniform vec2 windowSize;\n\nvoid main() {\n  position = inCoord * windowSize / max(windowSize.x, windowSize.y);\n  gl_Position = vec4(inCoord, 0.0, 1.0);\n}\n",
+    "fragment": "varying vec2 position;\nuniform float time;\nuniform sampler2D texture0;\n\nvoid main() {\n  gl_FragColor = vec4(\n    hsl2rgb(\n      vec3(fract(atan(position.y, position.x)/3.14159/2.0*10.0 + time/10.0),\n          1.0-length(position)/1.0,\n          0.5)),\n    1.0);\n}\n"
+}

@@ -1,73 +1,5 @@
 'use strict';
 
-const vertexSource = `#version 100
-precision highp float;
-attribute vec2 inCoord;
-varying vec2 position;
-uniform vec2 windowSize;
-
-void main() {
-    position = inCoord * windowSize / max(windowSize.x, windowSize.y);
-    gl_Position = vec4(inCoord, 0.0, 1.0);
-}
-`;
-
-const fragmentSource = `varying vec2 position;
-uniform float time;
-uniform sampler2D texture0;
-
-void main() {
-    gl_FragColor = vec4(
-	hsl2rgb(
-	    vec3(fract(atan(position.y, position.x)/3.14159/2.0*10.0 + time/10.0),
-		 1.0-length(position)/1.0,
-		 0.5)),
-	1.0);
-}
-`;
-
-const hsl2rgbSource = `#version 100
-precision highp float;
-
-float hue2rgb(float f1, float f2, float hue) {
-    if (hue < 0.0)
-	hue += 1.0;
-    else if (hue > 1.0)
-	hue -= 1.0;
-    float res;
-    if ((6.0 * hue) < 1.0)
-	res = f1 + (f2 - f1) * 6.0 * hue;
-    else if ((2.0 * hue) < 1.0)
-	res = f2;
-    else if ((3.0 * hue) < 2.0)
-	res = f1 + (f2 - f1) * ((2.0 / 3.0) - hue) * 6.0;
-    else
-	res = f1;
-    return res;
-}
-
-vec3 hsl2rgb(vec3 hsl) {
-    vec3 rgb;
-
-    if (hsl.y == 0.0) {
-	rgb = vec3(hsl.z); // Luminance
-    } else {
-	float f2;
-
-	if (hsl.z < 0.5)
-	    f2 = hsl.z * (1.0 + hsl.y);
-	else
-	    f2 = hsl.z + hsl.y - hsl.y * hsl.z;
-
-	float f1 = 2.0 * hsl.z - f2;
-
-	rgb.r = hue2rgb(f1, f2, hsl.x + (1.0/3.0));
-	rgb.g = hue2rgb(f1, f2, hsl.x);
-	rgb.b = hue2rgb(f1, f2, hsl.x - (1.0/3.0));
-    }
-    return rgb;
-}`
-
 class Renderer {
     constructor(canvas, vertEditor, fragEditor) {
 	this.canvas = canvas;
@@ -86,12 +18,11 @@ class Renderer {
 	if (!this.createQuad()) {
 	    return;
 	}
-	if (!this.createShader()) {
-	    return;
-	}
 	this.vertexEditor.addEventListener('input', this.handleShaderUpdate.bind(this));
 	this.fragmentEditor.addEventListener('input', this.handleShaderUpdate.bind(this));
-	window.requestAnimationFrame(this.draw.bind(this));
+	if (this.createShader()) {
+	    window.requestAnimationFrame(this.draw.bind(this));
+	}
     }
     
     setupWebGL() {
@@ -137,7 +68,7 @@ class Renderer {
 	
 	var fragmentSource = this.fragmentEditor.value;
 	var fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-	this.gl.shaderSource(fragmentShader, hsl2rgbSource + fragmentSource);
+	this.gl.shaderSource(fragmentShader, fragmentSource);
 	this.gl.compileShader(fragmentShader);
 	var fragmentLog = this.gl.getShaderInfoLog(fragmentShader);
 	
@@ -253,8 +184,8 @@ function selectShader(event) {
 }
 
 function shaderName() {
-    if (window.location.hash && /^[a-zA-Z0-9]+$/.test(window.location.hash)) {
-	return window.location.hash;
+    if (window.location.hash && /^#[a-zA-Z0-9]+$/.test(window.location.hash)) {
+	return window.location.hash.substring(1);
     }
     return 'default';
 }
@@ -274,20 +205,44 @@ function serialize() {
     var dl = document.getElementById('download');
     var file = new Blob([data], {type: 'application/json'});
     dl.href = URL.createObjectURL(file);
+    dl.download = shaderName() + '.json';
     dl.classList.remove('hidden');
     localStorage.setItem(shaderName(), data);
 }
 
+function fetchShader(name) {
+    return fetch(name).then(response => {
+	if (!response.ok) {
+	    throw new Error('HTTP error ' + response.status + ' ' + response.statusText);
+	}
+	return response.json();
+    })
+}
+
+function shaderToEditor(shader) {
+    document.getElementById('vertex-shader').value = shader['vertex'];
+    document.getElementById('fragment-shader').value = shader['fragment'];
+}
+
 function deserialize() {
-    var str = localStorage.getItem(shaderName());
+    var name = shaderName();
+    var str = localStorage.getItem(name);
     if (str) {
-	var data = JSON.parse(str);
-	document.getElementById('vertex-shader').value = data['vertex'];
-	document.getElementById('fragment-shader').value = data['fragment'];
+	shaderToEditor(JSON.parse(str));
     } else {
-	document.getElementById('vertex-shader').value = vertexSource;
-	document.getElementById('fragment-shader').value = fragmentSource;
+	fetchShader(name + '.json')
+	    .then(data => shaderToEditor(data))
+	    .catch(err => {
+		fetchShader('default.json')
+		    .then(data => shaderToEditor(data))
+		    .catch(err => 'Failed to load shaders: ' + err)
+			});
     }
+}
+
+function error(err) {
+    document.getElementById("errors").innerHTML = err;
+    console.error(err);
 }
 
 function setup(event) {
