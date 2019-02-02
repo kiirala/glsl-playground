@@ -1,0 +1,54 @@
+body {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+}
+
+#header {
+    display: flex;
+    flex-direction: row;
+    height: 2em;
+}
+
+#header #time {
+    width: 14ex
+}
+
+#header #errors {
+    flex-grow: 1;
+}
+
+canvas {
+    flex-grow: 1;
+}
+
+#editor {
+    width: 100%;
+    height: 10em;
+    display: flex;
+    flex-direction: row;
+}
+
+#editor-select {
+    display: flex;
+    flex-direction: column;
+}
+
+textarea {
+    flex-grow: 1;
+}
+
+.hidden {
+    display: none;
+}
+
+button {
+    color: #000;
+    background: #eee;
+}
+
+button.selected {
+    color: #000;
+    background: #ccf;
+}

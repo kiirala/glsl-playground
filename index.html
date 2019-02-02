@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <title>GLSL shader test</title>
+    <link href="style.css" rel="stylesheet", type="text/css"/>
+    <script src="quad.js" type="text/javascript"></script>
+  </head>
+  
+  <body>
+    <div id='header'>
+      <span id='time'></span>
+      <span id='errors'></span>
+    </div>
+    <canvas id='quad'>It appears that your browser does not support
+      HTML5 "canvas" elements. Unfortunately, this page is completely
+      useless without one.</canvas>
+    <div id='editor'>
+      <div id='editor-select'>
+	<button id='select-vertex'>Vertex</button>
+	<button id='select-fragment'
+		class='selected'>Fragment</button>
+	<a id='download' class='hidden'>Download</a>
+      </div>
+      <textarea id='vertex-shader' class='hidden'></textarea>
+      <textarea id='fragment-shader'></textarea>
+    </div>
+  </body>
+</html>
