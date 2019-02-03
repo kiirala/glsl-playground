@@ -13,7 +13,7 @@ class Renderer {
 	if (!this.setupWebGL()) {
 	    return;
 	}
-	this.fetchTexture(0, "img/tkoaly.png");
+	this.fetchTexture(0, 'img/tkoaly.png');
 
 	if (!this.createQuad()) {
 	    return;
@@ -200,6 +200,7 @@ function serializedData() {
     var data = {
 	'vertex': vertexSource,
 	'fragment': fragmentSource,
+	'textures': ['img/tkoaly.png'],
     };
     return JSON.stringify(data, null, 2);
 }
