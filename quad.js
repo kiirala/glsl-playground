@@ -1,10 +1,10 @@
 'use strict';
 
 class Renderer {
-    constructor(canvas, vertEditor, fragEditor) {
+    constructor(canvas) {
 	this.canvas = canvas;
-	this.vertexEditor = vertEditor;
-	this.fragmentEditor = fragEditor;
+	this.vertexSource = null;
+	this.fragmentSource = null;
 	this.gl = null;
 	this.quad = null;
 	this.program = null;
@@ -18,13 +18,32 @@ class Renderer {
 	if (!this.createQuad()) {
 	    return;
 	}
-	this.vertexEditor.addEventListener('input', this.handleShaderUpdate.bind(this));
-	this.fragmentEditor.addEventListener('input', this.handleShaderUpdate.bind(this));
-	if (this.createShader()) {
+    }
+
+    setShaders(vertex, fragment) {
+	this.vertexSource = vertex;
+	this.fragmentSource = fragment;
+	this.checkResources();
+    }
+
+    checkResources() {
+	var hasAll = true;
+	if (!this.vertexSource) {
+	    hasAll = false;
+	}
+	if (!this.fragmentSource) {
+	    hasAll = false;
+	}
+	for (var texture of this.textures) {
+	    if (!texture) {
+		hasAll = false;
+	    }
+	}
+	if (hasAll && this.createShader()) {
 	    window.requestAnimationFrame(this.draw.bind(this));
 	}
     }
-    
+
     setupWebGL() {
 	this.canvas.width = this.canvas.clientWidth;
 	this.canvas.height = this.canvas.clientHeight;
@@ -60,15 +79,13 @@ class Renderer {
 	    this.program = null;
 	}
 
-	var vertexSource = this.vertexEditor.value;
 	var vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
-	this.gl.shaderSource(vertexShader, vertexSource);
+	this.gl.shaderSource(vertexShader, this.vertexSource);
 	this.gl.compileShader(vertexShader);
 	var vertexLog = this.gl.getShaderInfoLog(vertexShader);
 	
-	var fragmentSource = this.fragmentEditor.value;
 	var fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-	this.gl.shaderSource(fragmentShader, fragmentSource);
+	this.gl.shaderSource(fragmentShader, this.fragmentSource);
 	this.gl.compileShader(fragmentShader);
 	var fragmentLog = this.gl.getShaderInfoLog(fragmentShader);
 	
@@ -110,6 +127,7 @@ class Renderer {
 	    //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
 	    //this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
 	    this.textures[index] = texture;
+	    this.checkResources();
 	};
 	image.src = url;
     }
@@ -154,20 +172,6 @@ class Renderer {
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
 
 	if (!this.checkErrors()) {
-	    window.requestAnimationFrame(this.draw.bind(this));
-	}
-    }
-
-    handleShaderUpdate(event) {
-	if (this.shaderUpdateTimer) {
-	    clearTimeout(this.shaderUpdateTimer);
-	}
-	this.shaderUpdateTimer = setTimeout(this.runShaderUpdate.bind(this), 1000);
-    }
-
-    runShaderUpdate(event) {
-	this.shaderUpdateTimer = null;
-	if (this.createShader()) {
 	    window.requestAnimationFrame(this.draw.bind(this));
 	}
     }
@@ -229,14 +233,35 @@ function deserialize() {
     var str = localStorage.getItem(name);
     if (str) {
 	shaderToEditor(JSON.parse(str));
-    } else {
-	fetchShader(name + '.json')
-	    .then(data => shaderToEditor(data))
-	    .catch(err => {
-		fetchShader('default.json')
-		    .then(data => shaderToEditor(data))
-		    .catch(err => 'Failed to load shaders: ' + err)
-			});
+	return new Promise(function(resolve, reject) {
+	    resolve();
+	});
+    }
+    return fetchShader(name + '.json')
+	.then(data => shaderToEditor(data))
+	.catch(err => {
+	    fetchShader('default.json')
+		.then(data => shaderToEditor(data))
+		.catch(err => 'Failed to load shaders: ' + err)
+		    });
+}
+
+class ReferredUpdate {
+    constructor(update) {
+	this.update = update;
+	this.timer = null;
+    }
+
+    update(event) {
+	if (this.timer) {
+	    clearTimeout(this.timer);
+	}
+	this.shaderUpdateTimer = setTimeout(this.updateNow.bind(this), 1000);
+    }
+
+    updateNow(event) {
+	this.timer = null;
+	this.update();
     }
 }
 
@@ -247,9 +272,15 @@ function error(err) {
 
 function setup(event) {
     window.removeEventListener(event.type, setup, false);
-    deserialize();
     var canvas = document.getElementById('quad');
-    new Renderer(canvas, document.getElementById('vertex-shader'), document.getElementById('fragment-shader'));
+    var renderer = new Renderer(canvas);
+    var shaderUpdate = new ReferredUpdate(() => {
+	renderer.setShaders(document.getElementById('vertex-shader').value,
+			    document.getElementById('fragment-shader').value);
+    });
+    deserialize().then(shaderUpdate.updateNow.bind(shaderUpdate));
+    document.getElementById('vertex-shader').addEventListener('input', shaderUpdate.update.bind(shaderUpdate));
+    document.getElementById('fragment-shader').addEventListener('input', shaderUpdate.update.bind(shaderUpdate));
     document.getElementById('select-vertex').addEventListener('click', selectShader);
     document.getElementById('select-fragment').addEventListener('click', selectShader);
 }
