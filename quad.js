@@ -13,7 +13,7 @@ class Renderer {
 	if (!this.setupWebGL()) {
 	    return;
 	}
-	this.fetchTexture(0, "tkoaly.png");
+	this.fetchTexture(0, "img/tkoaly.png");
 
 	if (!this.createQuad()) {
 	    return;
@@ -237,10 +237,10 @@ function deserialize() {
 	    resolve();
 	});
     }
-    return fetchShader(name + '.json')
+    return fetchShader('shader/' + name + '.json')
 	.then(data => shaderToEditor(data))
 	.catch(err => {
-	    fetchShader('default.json')
+	    fetchShader('shader/default.json')
 		.then(data => shaderToEditor(data))
 		.catch(err => 'Failed to load shaders: ' + err)
 		    });
