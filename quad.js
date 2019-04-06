@@ -45,8 +45,6 @@ class Renderer {
     }
 
     setupWebGL() {
-	this.canvas.width = this.canvas.clientWidth;
-	this.canvas.height = this.canvas.clientHeight;
 	this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
 	if (!this.gl) {
 	    const err = 'Failed to acquire GL rendering context';
@@ -54,11 +52,18 @@ class Renderer {
 	    console.error(err);
 	    return false;
 	}
-	this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
+	this.resizeWindow();
+	window.addEventListener('resize', this.resizeWindow.bind(this));
 	this.gl.clearColor(1.0, 0.0, 1.0, 1.0);
 	this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 	document.getElementById('errors').innerHTML = 'WebGL setup done.';
 	return !this.checkErrors();
+    }
+
+    resizeWindow() {
+	this.canvas.width = this.canvas.clientWidth;
+	this.canvas.height = this.canvas.clientHeight;
+	this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
     }
 
     createQuad() {
